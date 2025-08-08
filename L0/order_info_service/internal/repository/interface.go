@@ -10,6 +10,7 @@ import (
 type RepositoryProvider interface {
 	CreateOrder(context.Context, *model.Order) (*model.Order, error)
 	GetOrderByID(context.Context, string) (*model.Order, error)
+	GetAllOrders(context.Context, int) ([]*model.Order, error)
 	GetItemsByOrderUID(context.Context, string, int) ([]*model.Item, error)
 }
 

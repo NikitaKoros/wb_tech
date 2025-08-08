@@ -8,7 +8,7 @@ type Order struct {
 	Entry             string    `json:"entry" validate:"required"`
 	Delivery          Delivery  `json:"delivery" validate:"required,dive"`
 	Payment           Payment   `json:"payment" validate:"required,dive"`
-	Items             []Item    `json:"items" validate:"required,min=1,dive"`
+	Items             []*Item    `json:"items" validate:"required,min=1,dive"`
 	Locale            string    `json:"locale" validate:"required,oneof=en ru"`
 	InternalSignature string    `json:"internal_signature" validate:"omitempty"`
 	CustomerID        string    `json:"customer_id" validate:"required"`

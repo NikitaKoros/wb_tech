@@ -1,12 +1,14 @@
 package dto
 
 import (
-	"database/sql"
-
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/model"
 )
 
-func ScanOrderFromRow(row *sql.Row) (*model.Order, error){
+type RowScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func ScanOrderFromRow(row RowScanner) (*model.Order, error){
 	var order model.Order
 	
 	if err := row.Scan(
@@ -28,7 +30,7 @@ func ScanOrderFromRow(row *sql.Row) (*model.Order, error){
 	return &order, nil
 }
 
-func ScanDeliveryFromRow(row *sql.Row) (*model.Delivery, error){
+func ScanDeliveryFromRow(row RowScanner) (*model.Delivery, error){
 	var delivery model.Delivery
 	
 	if err := row.Scan(
@@ -47,7 +49,7 @@ func ScanDeliveryFromRow(row *sql.Row) (*model.Delivery, error){
 	return &delivery, nil
 }
 
-func ScanPaymentFromRow(row *sql.Row) (*model.Payment, error){
+func ScanPaymentFromRow(row RowScanner) (*model.Payment, error){
 	var payment model.Payment
 	
 	if err := row.Scan(
@@ -68,7 +70,7 @@ func ScanPaymentFromRow(row *sql.Row) (*model.Payment, error){
 	return &payment, nil
 }
 
-func ScanItemFromRow(row *sql.Rows) (*model.Item, error){
+func ScanItemFromRow(row RowScanner) (*model.Item, error){
 	var item model.Item
 	
 	if err := row.Scan(

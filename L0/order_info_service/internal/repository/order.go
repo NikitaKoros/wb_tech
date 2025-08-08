@@ -41,6 +41,10 @@ const (
 
 	getOrderByIDQuery = `SELECT * FROM orders
 		WHERE order_uid = $1`
+		
+	getAllOrdersQuery = `SELECT * FROM orders
+		ORDER BY order_uid
+		LIMIT $1`
 
 	getDeliveryByOrderUIDQuery = `SELECT * FROM deliveries
 		WHERE order_uid = $1`
@@ -171,6 +175,46 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (ord
 	return order, nil
 }
 
+func (r *OrderRepository) GetAllOrders(ctx context.Context, limit int) (orders []*model.Order, err error) {
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	
+	defer func() {
+		err = r.finishTransaction(tx, err)
+	}()
+	
+	orders = make([]*model.Order, 0)
+	orders, err = r.getAllOrders(ctx, tx, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all orders: %w", err)
+	}
+	
+	for i, order := range orders {
+		delivery, err := r.getDeliveryByOrderUID(ctx, tx, order.OrderUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get delivery of order %s: %w", order.OrderUID, err)
+		}
+		
+		payment, err := r.getPaymentByOrderUID(ctx, tx, order.OrderUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get payment of order %s: %w", order.OrderUID, err)
+		}
+		
+		items, err := r.getItemsByOrderUID(ctx, tx, order.OrderUID, limit)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get items for order %s: %w", order.OrderUID, err)
+		}
+		
+		orders[i].Delivery = *delivery
+		orders[i].Payment = *payment
+		orders[i].Items = items
+	}
+	
+	return orders, nil
+}
+
 func (r *OrderRepository) GetItemsByOrderUID(ctx context.Context, orderID string, limit int) (items []*model.Item, err error) {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
@@ -197,6 +241,30 @@ func (r *OrderRepository) getOrderByOrderUID(ctx context.Context, q Querier, ord
 		return nil, err
 	}
 	return order, nil
+}
+
+func (r *OrderRepository) getAllOrders(ctx context.Context, q Querier, limit int) ([]*model.Order, error) {
+	orders := make([]*model.Order, 0)
+	
+	rows, err := q.QueryContext(ctx, getAllOrdersQuery, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	for rows.Next() {
+		order, err := dto.ScanOrderFromRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		orders = append(orders, order)
+	}
+	
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	
+	return orders, nil
 }
 
 func (r *OrderRepository) getDeliveryByOrderUID(ctx context.Context, q Querier, orderID string) (*model.Delivery, error) {
