@@ -74,6 +74,8 @@ func ScanItemFromRow(row RowScanner) (*model.Item, error){
 	var item model.Item
 	
 	if err := row.Scan(
+		&item.ID,
+		&item.OrderUID,
 		&item.ChrtID,      
 		&item.TrackNumber, 
 		&item.Price,   

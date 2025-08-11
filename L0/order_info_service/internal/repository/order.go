@@ -3,10 +3,12 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/dto"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/model"
+	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/srvcerrors"
 )
 
 type OrderRepository struct {
@@ -50,7 +52,7 @@ const (
 		WHERE order_uid = $1`
 
 	getPaymentByOrderUIDQuery = `SELECT * FROM payments
-		WHERE order_uid = $1`
+		WHERE transaction = $1`
 
 	getItemsByOrderUIDQuery = `SELECT * FROM items
 		WHERE order_uid = $1
@@ -65,12 +67,16 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 func (r *OrderRepository) CreateOrder(ctx context.Context, order *model.Order) (newOrder *model.Order, err error) {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return nil, wrapDBError("failed to begin transaction", "", err)
 	}
 
 	defer func() {
 		err = r.finishTransaction(tx, err)
 	}()
+	
+	if _, err := r.getOrderByOrderUID(ctx, tx, order.OrderUID); err == nil {
+		// TODO update
+	}
 
 	row := tx.QueryRowContext(ctx, insertIntoOrdersQuery,
 		order.OrderUID,
@@ -86,7 +92,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order *model.Order) (
 		order.OofShard,
 	)
 	if newOrder, err = dto.ScanOrderFromRow(row); err != nil {
-		return nil, fmt.Errorf("failed to insert into orders while creating order: %w", err)
+		return nil, wrapDBError("failed to insert into orders while creating order", "", err)
 	}
 
 	if _, err := tx.ExecContext(ctx, insertIntoDeliveriesQuery,
@@ -99,7 +105,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order *model.Order) (
 		order.Delivery.Region,
 		order.Delivery.Email,
 	); err != nil {
-		return nil, fmt.Errorf("failed to insert into deliveries while creating order: %w", err)
+		return nil, wrapDBError("failed to insert into deliveries while creating order", "", err)
 	}
 	newOrder.Delivery = order.Delivery
 	
@@ -115,7 +121,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order *model.Order) (
 		order.Payment.GoodsTotal,    
 		order.Payment.CustomFee,     
 	); err != nil {
-		return nil, fmt.Errorf("failed to insert into payments while creating order: %w", err)
+		return nil, wrapDBError("failed to insert into payments while creating order", "", err)
 	}
 	newOrder.Payment = order.Payment
 	
@@ -136,7 +142,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order *model.Order) (
 		)
 		
 		if err := row.Scan(&order.Items[i].ID); err != nil {
-			return nil, fmt.Errorf("failed to insert into items while creating order: %w", err)
+			return nil, wrapDBError("failed to insert into items while creating order", "", err)
 		}
 	}
 	newOrder.Items = order.Items
@@ -147,7 +153,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order *model.Order) (
 func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (order *model.Order, err error) {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return nil, wrapDBError("failed to begin transaction", "", err)
 	}
 
 	defer func() {
@@ -156,17 +162,17 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (ord
 
 	order, err = r.getOrderByOrderUID(ctx, tx, orderID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get order by id %s: %w", orderID, err)
+		return nil, wrapDBError("failed to get order by id", orderID, err)
 	}
 
 	delivery, err := r.getDeliveryByOrderUID(ctx, tx, orderID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get delivery by order_uid %s: %w", orderID, err)
+		return nil, wrapDBError("failed to get delivery by order_uid", orderID, err)
 	}
 
 	payment, err := r.getPaymentByOrderUID(ctx, tx, orderID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get payment by order id %s: %w", orderID, err)
+		return nil, wrapDBError("failed to get payment by order id", orderID, err)
 	}
 
 	order.Delivery = *delivery
@@ -178,7 +184,7 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (ord
 func (r *OrderRepository) GetAllOrders(ctx context.Context, limit int) (orders []*model.Order, err error) {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return nil, wrapDBError("failed to begin transaction", "", err)
 	}
 	
 	defer func() {
@@ -188,23 +194,23 @@ func (r *OrderRepository) GetAllOrders(ctx context.Context, limit int) (orders [
 	orders = make([]*model.Order, 0)
 	orders, err = r.getAllOrders(ctx, tx, limit)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all orders: %w", err)
+		return nil, wrapDBError("failed to get all orders", "", err)
 	}
 	
 	for i, order := range orders {
 		delivery, err := r.getDeliveryByOrderUID(ctx, tx, order.OrderUID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get delivery of order %s: %w", order.OrderUID, err)
+			return nil, wrapDBError("failed to get delivery of order", order.OrderUID, err)
 		}
 		
 		payment, err := r.getPaymentByOrderUID(ctx, tx, order.OrderUID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get payment of order %s: %w", order.OrderUID, err)
+			return nil, wrapDBError("failed to get payment of order", order.OrderUID, err)
 		}
 		
 		items, err := r.getItemsByOrderUID(ctx, tx, order.OrderUID, limit)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get items for order %s: %w", order.OrderUID, err)
+			return nil, wrapDBError("failed to get items for order", order.OrderUID, err)
 		}
 		
 		orders[i].Delivery = *delivery
@@ -218,7 +224,7 @@ func (r *OrderRepository) GetAllOrders(ctx context.Context, limit int) (orders [
 func (r *OrderRepository) GetItemsByOrderUID(ctx context.Context, orderID string, limit int) (items []*model.Item, err error) {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return nil, wrapDBError("failed to begin transaction", "", err)
 	}
 
 	defer func(){
@@ -228,7 +234,7 @@ func (r *OrderRepository) GetItemsByOrderUID(ctx context.Context, orderID string
 	items = make([]*model.Item, 0, limit)
 	items, err = r.getItemsByOrderUID(ctx, tx, orderID, limit)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get items of order %s: %w", orderID, err)
+		return nil, wrapDBError("failed to get items of order", orderID, err)
 	}
 
 	return items, nil
@@ -312,13 +318,27 @@ func (r *OrderRepository) getItemsByOrderUID(ctx context.Context, q Querier, ord
 func (r *OrderRepository) finishTransaction(tx *sql.Tx, origErr error) error {
 	if origErr != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("%v; rollback failed: %w", origErr, rbErr)
+			return fmt.Errorf("%v\n%w: rollback failed:\n[%v]\n", origErr, srvcerrors.ErrDatabase, rbErr)
 		}
-		return fmt.Errorf("%w; rollback succeeded", origErr)
+		return fmt.Errorf("%w\nrollback succeeded", origErr)
 	}
 
 	if commitErr := tx.Commit(); commitErr != nil {
-		return fmt.Errorf("commit failed: %w", commitErr)
+		return fmt.Errorf("%w: commit failed:\n[%v]\n", srvcerrors.ErrDatabase, commitErr)
 	}
 	return nil
+}
+
+func wrapDBError(baseMsg string, id string, err error) error {
+	var errType error
+	if errors.Is(err, sql.ErrNoRows) {
+		errType = srvcerrors.ErrNotFound
+	} else {
+		errType = srvcerrors.ErrDatabase
+	}
+
+	if id != "" {
+		return fmt.Errorf("%w: %s %s:\n[%v]\n", errType, baseMsg, id, err)
+	}
+	return fmt.Errorf("%w: %s:\n[%v]\n", errType, baseMsg, err)
 }

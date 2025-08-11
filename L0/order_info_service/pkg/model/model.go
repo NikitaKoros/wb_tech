@@ -8,7 +8,7 @@ type Order struct {
 	Entry             string    `json:"entry" validate:"required"`
 	Delivery          Delivery  `json:"delivery" validate:"required,dive"`
 	Payment           Payment   `json:"payment" validate:"required,dive"`
-	Items             []*Item    `json:"items" validate:"required,min=1,dive"`
+	Items             []*Item   `json:"items" validate:"required,min=1,dive"`
 	Locale            string    `json:"locale" validate:"required,oneof=en ru"`
 	InternalSignature string    `json:"internal_signature" validate:"omitempty"`
 	CustomerID        string    `json:"customer_id" validate:"required"`
@@ -31,7 +31,6 @@ type Delivery struct {
 }
 
 type Payment struct {
-	OrderUID string `json:"order_uid" validate:"required"`
 	Transaction  string `json:"transaction" validate:"required"`
 	RequestID    string `json:"request_id" validate:"omitempty"`
 	Currency     string `json:"currency" validate:"required,oneof=USD RUB"`
@@ -45,7 +44,7 @@ type Payment struct {
 }
 
 type Item struct {
-	OrderUID string `json:"order_uid" validate:"required"`
+	OrderUID    string `json:"order_uid" validate:"required"`
 	ID          int    `json:"id" validate:"omitempty"`
 	ChrtID      int    `json:"chrt_id" validate:"required"`
 	TrackNumber string `json:"track_number" validate:"required"`

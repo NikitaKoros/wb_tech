@@ -7,6 +7,7 @@ import (
 
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/repository"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/model"
+	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/srvcerrors"
 )
 
 type LocalCache struct {
@@ -39,7 +40,7 @@ func (l *LocalCache) GetOrderByID(orderID string) (*model.Order, error){
 	
 	order, ok := l.orders[orderID]
 	if !ok {
-		return nil, fmt.Errorf("order %s not found", orderID)
+		return nil, fmt.Errorf("%w: order %s not found in cache", srvcerrors.ErrNotFound, orderID)
 	}
 	return order, nil
 }
@@ -50,7 +51,7 @@ func (l *LocalCache) GetItemsByOrderUID(orderID string) ([]*model.Item, error){
 	
 	order, ok := l.orders[orderID]
 	if !ok {
-		return nil, fmt.Errorf("failed to get items of order %s: order not found", orderID)
+		return nil, fmt.Errorf("%w: failed to get items of order %s: order not found in cache", srvcerrors.ErrNotFound, orderID)
 	}
 	return order.Items, nil
 }
