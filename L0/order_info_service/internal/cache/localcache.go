@@ -28,7 +28,7 @@ func WarmUpCache(ctx context.Context, repo repository.RepositoryProvider, cache 
 	}
 	
 	for _, order := range orders {
-		cache.SetOrder(ctx, order)
+		cache.SetOrder(order)
 	}
 	
 	return nil

@@ -2,11 +2,15 @@ package controller
 
 import (
 	"context"
+	"errors"
+
+	"go.uber.org/zap"
 
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/cache"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/logger"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/repository"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/model"
+	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/srvcerrors"
 )
 
 type ControllerProvider interface {
@@ -22,24 +26,63 @@ type Controller struct {
 
 func NewController(r repository.RepositoryProvider, c cache.Cache, l logger.Logger) *Controller {
 	return &Controller{
-		repo: r, 
-		cache: c,
+		repo:   r,
+		cache:  c,
 		logger: l,
 	}
 }
 
 func (ctrl *Controller) GetOrderByID(ctx context.Context, orderID string) (*model.Order, error) {
-	order, err := ctrl.repo.GetOrderByID(ctx, orderID)
+	ctrl.logger.Info("controller: request to get order by id",
+		zap.String("order_uid", orderID))
+	
+	order, err := ctrl.cache.GetOrderByID(orderID)
+	if err == nil {
+		return order, nil
+	}
+
+	order, err = ctrl.repo.GetOrderByID(ctx, orderID)
 	if err != nil {
+		logError(ctrl.logger, "controller: failed to get order by id", orderID, err)
 		return nil, err
 	}
+	ctrl.cache.SetOrder(order)
 	return order, nil
 }
 
 func (ctrl *Controller) GetItemsByOrderUID(ctx context.Context, orderID string, limit int) ([]*model.Item, error) {
-	items, err := ctrl.repo.GetItemsByOrderUID(ctx, orderID, limit)
+	ctrl.logger.Info("controller: request to get items by order id", 
+		zap.String("order_uid", orderID),
+		zap.Int("limit", limit))
+	
+	items, err := ctrl.cache.GetItemsByOrderUID(orderID)
+	if err == nil {
+		return items, nil
+	}
+
+	items, err = ctrl.repo.GetItemsByOrderUID(ctx, orderID, limit)
 	if err != nil {
+		logError(ctrl.logger, "controller: failed to get items", orderID, err)
 		return nil, err
 	}
+
+	order, err := ctrl.GetOrderByID(ctx, orderID)
+	if err != nil {
+		ctrl.logger.Warn("controller: failed to update cache", 
+        zap.String("order_uid", orderID), 
+        zap.Error(err))
+		return items, nil
+	}
+
+	order.Items = items
+	ctrl.cache.SetOrder(order)
 	return items, nil
+}
+
+func logError(logger logger.Logger, msg string, orderID string, err error) {
+	if errors.Is(err, srvcerrors.ErrNotFound) {
+		logger.Warn(msg, zap.String("order_uid", orderID), zap.Error(err))
+	} else {
+		logger.Error(msg, zap.String("order_uid", orderID), zap.Error(err))
+	}
 }
