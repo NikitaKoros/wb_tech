@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	_ "github.com/lib/pq"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -81,7 +82,7 @@ func TestCreateOrder_Success(t *testing.T) {
 
 	order := generateTestOrder()
 
-	createdOrder, err := repo.CreateOrder(ctx, order)
+	createdOrder, err := repo.UpsertOrder(ctx, order)
 
 	require.NoError(t, err)
 	require.NotNil(t, createdOrder)
@@ -109,7 +110,7 @@ func TestCreateOrder_Fail(t *testing.T) {
 	mock.ExpectQuery(expectQuery).WillReturnError(srvcerrors.ErrDatabase)
 	mock.ExpectRollback()
 
-	createdOrder, err := repo.CreateOrder(ctx, order)
+	createdOrder, err := repo.UpsertOrder(ctx, order)
 
 	require.Error(t, err)
 	require.Nil(t, createdOrder)
@@ -123,11 +124,11 @@ func TestGetOrderByID_Success(t *testing.T) {
 	ctx := context.Background()
 
 	order := generateTestOrder()
-	createdOrder, err := repo.CreateOrder(ctx, order)
+	createdOrder, err := repo.UpsertOrder(ctx, order)
 	require.NoError(t, err)
 	require.NotNil(t, createdOrder)
 
-	gotOrder, err := repo.GetOrderByID(ctx, order.OrderUID)
+	gotOrder, err := repo.GetOrderByUID(ctx, order.OrderUID)
 	require.NoError(t, err)
 	require.NotNil(t, gotOrder)
 	opts := []cmp.Option{
@@ -142,7 +143,7 @@ func TestGetOrderByID_Fail(t *testing.T) {
 	ctx := context.Background()
 	orderUID := "nonexictent"
 
-	order, err := repo.GetOrderByID(ctx, orderUID)
+	order, err := repo.GetOrderByUID(ctx, orderUID)
 	require.Error(t, err)
 	require.Nil(t, order)
 	require.ErrorIs(t, err, srvcerrors.ErrNotFound)
@@ -161,7 +162,7 @@ func TestGetAllOrders_Success(t *testing.T) {
 		for _, item := range order.Items {
 			item.OrderUID = order.OrderUID
 		}
-		_, err := repo.CreateOrder(ctx, order)
+		_, err := repo.UpsertOrder(ctx, order)
 		require.NoError(t, err)
 	}
 
@@ -194,13 +195,28 @@ func TestGetItemsByOrderUID_Success(t *testing.T) {
 	ctx := context.Background()
 
 	order := generateTestOrder()
-	createdOrder, err := repo.CreateOrder(ctx, order)
+	order.Items = append(order.Items, []*model.Item{
+		{
+			OrderUID: order.OrderUID,
+			ChrtID:      1003,
+			TrackNumber: "track-123",
+		},
+		{
+			OrderUID: order.OrderUID,
+			ChrtID:      1004,
+			TrackNumber: "track-123",
+		},
+	}...)
+	
+	createdOrder, err := repo.UpsertOrder(ctx, order)
 	require.NoError(t, err)
 	require.NotNil(t, createdOrder)
 
-	items, err := repo.GetItemsByOrderUID(ctx, order.OrderUID, 10)
+	items, err := repo.GetItemsByOrderUID(ctx, order.OrderUID, 2, 10)
 	require.NoError(t, err)
-	require.Len(t, items, len(order.Items))
+	require.Len(t, items, 2)
+	assert.Equal(t, items[0].ID, 3)
+	assert.Equal(t, items[1].ID, 4)
 }
 
 func TestGetItemsByOrderUID_Fail(t *testing.T) {
@@ -213,7 +229,7 @@ func TestGetItemsByOrderUID_Fail(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta(getItemsByOrderUIDQuery)).WillReturnError(srvcerrors.ErrDatabase)
 	mock.ExpectRollback()
 
-	items, err := repo.GetItemsByOrderUID(ctx, "any-uid", 10)
+	items, err := repo.GetItemsByOrderUID(ctx, "any-uid", 0, 10)
 
 	require.Error(t, err)
 	require.Nil(t, items)

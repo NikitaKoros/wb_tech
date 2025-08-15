@@ -15,7 +15,7 @@ import (
 
 type ControllerProvider interface {
 	GetOrderByID(context.Context, string) (*model.Order, error)
-	GetItemsByOrderUID(context.Context, string, int) ([]*model.Item, error)
+	GetItemsByOrderUID(context.Context, string, int, int) ([]*model.Item, error)
 }
 
 type Controller struct {
@@ -41,7 +41,7 @@ func (ctrl *Controller) GetOrderByID(ctx context.Context, orderID string) (*mode
 		return order, nil
 	}
 
-	order, err = ctrl.repo.GetOrderByID(ctx, orderID)
+	order, err = ctrl.repo.GetOrderByUID(ctx, orderID)
 	if err != nil {
 		logError(ctrl.logger, "controller: failed to get order by id", orderID, err)
 		return nil, err
@@ -50,7 +50,7 @@ func (ctrl *Controller) GetOrderByID(ctx context.Context, orderID string) (*mode
 	return order, nil
 }
 
-func (ctrl *Controller) GetItemsByOrderUID(ctx context.Context, orderID string, limit int) ([]*model.Item, error) {
+func (ctrl *Controller) GetItemsByOrderUID(ctx context.Context, orderID string, lastID, limit int) ([]*model.Item, error) {
 	ctrl.logger.Info("controller: request to get items by order id", 
 		zap.String("order_uid", orderID),
 		zap.Int("limit", limit))
@@ -60,7 +60,7 @@ func (ctrl *Controller) GetItemsByOrderUID(ctx context.Context, orderID string, 
 		return items, nil
 	}
 
-	items, err = ctrl.repo.GetItemsByOrderUID(ctx, orderID, limit)
+	items, err = ctrl.repo.GetItemsByOrderUID(ctx, orderID, lastID, limit)
 	if err != nil {
 		logError(ctrl.logger, "controller: failed to get items", orderID, err)
 		return nil, err
