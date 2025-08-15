@@ -16,9 +16,6 @@ import (
 
 // middleware for metrics?
 
-type HandlerProvider interface {
-}
-
 type Handler struct {
 	ctrl   controller.ControllerProvider
 	logger logger.Logger
@@ -60,7 +57,7 @@ func (h *Handler) getOrder(c echo.Context) error {
 		return srvcerrors.ErrInvalidInput
 	}
 
-	order, err := h.ctrl.GetOrderByID(c.Request().Context(), orderID)
+	order, err := h.ctrl.GetOrderByUID(c.Request().Context(), orderID)
 	if err != nil {
 		return err
 	}
@@ -126,12 +123,11 @@ func ZapLogger(logger logger.Logger) echo.MiddlewareFunc {
 					zap.String("order_uid", c.Param("id")),
 					zap.Error(err))
 			} else {
-				logger.Debug("handler: request failed",
+				logger.Debug("handler: request completed",
 					zap.String("method", c.Request().Method),
 					zap.String("path", c.Request().URL.Path),
 					zap.Duration("duration", duration),
-					zap.String("order_uid", c.Param("id")),
-					zap.Error(err))
+					zap.String("order_uid", c.Param("id")))
 			}
 			return err
 		}

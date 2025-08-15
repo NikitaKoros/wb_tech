@@ -1,11 +1,9 @@
 package cache
 
 import (
-	"context"
 	"fmt"
 	"sync"
 
-	"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/repository"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/model"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/srvcerrors"
 )
@@ -20,21 +18,8 @@ func NewLocalCache() *LocalCache{
 		orders: make(map[string]*model.Order),
 	}
 }
-
-func WarmUpCache(ctx context.Context, repo repository.RepositoryProvider, cache Cache, limit int) (error){
-	orders, err := repo.GetAllOrders(ctx, limit)
-	if err != nil {
-		return fmt.Errorf("failed to get orders to warmup cache: %w", err)
-	}
-	
-	for _, order := range orders {
-		cache.SetOrder(order)
-	}
-	
-	return nil
-}
  
-func (l *LocalCache) GetOrderByID(orderID string) (*model.Order, error){
+func (l *LocalCache) GetOrderByUID(orderID string) (*model.Order, error){
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	

@@ -29,4 +29,10 @@ test-cache:
 	@richgo test ./order_info_service/internal/cache/... -v
 	
 test-controller:
+	@echo "Running controller tests..."
+	@richgo test ./order_info_service/internal/controller/... -v
+	
 test-handler:
+	@echo "Running handler tests..."
+	@richgo test ./order_info_service/internal/handler/... -v
+	

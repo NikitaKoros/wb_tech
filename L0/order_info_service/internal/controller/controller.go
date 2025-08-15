@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"go.uber.org/zap"
 
@@ -14,7 +15,7 @@ import (
 )
 
 type ControllerProvider interface {
-	GetOrderByID(context.Context, string) (*model.Order, error)
+	GetOrderByUID(context.Context, string) (*model.Order, error)
 	GetItemsByOrderUID(context.Context, string, int, int) ([]*model.Item, error)
 }
 
@@ -32,11 +33,11 @@ func NewController(r repository.RepositoryProvider, c cache.Cache, l logger.Logg
 	}
 }
 
-func (ctrl *Controller) GetOrderByID(ctx context.Context, orderID string) (*model.Order, error) {
+func (ctrl *Controller) GetOrderByUID(ctx context.Context, orderID string) (*model.Order, error) {
 	ctrl.logger.Info("controller: request to get order by id",
 		zap.String("order_uid", orderID))
 	
-	order, err := ctrl.cache.GetOrderByID(orderID)
+	order, err := ctrl.cache.GetOrderByUID(orderID)
 	if err == nil {
 		return order, nil
 	}
@@ -66,7 +67,7 @@ func (ctrl *Controller) GetItemsByOrderUID(ctx context.Context, orderID string, 
 		return nil, err
 	}
 
-	order, err := ctrl.GetOrderByID(ctx, orderID)
+	order, err := ctrl.GetOrderByUID(ctx, orderID)
 	if err != nil {
 		ctrl.logger.Warn("controller: failed to update cache", 
         zap.String("order_uid", orderID), 
@@ -77,6 +78,19 @@ func (ctrl *Controller) GetItemsByOrderUID(ctx context.Context, orderID string, 
 	order.Items = items
 	ctrl.cache.SetOrder(order)
 	return items, nil
+}
+
+func WarmUpCache(ctx context.Context, repo repository.RepositoryProvider, cache cache.Cache, limit int) (error){
+	orders, err := repo.GetAllOrders(ctx, limit)
+	if err != nil {
+		return fmt.Errorf("failed to get orders to warmup cache: %w", err)
+	}
+	
+	for _, order := range orders {
+		cache.SetOrder(order)
+	}
+	
+	return nil
 }
 
 func logError(logger logger.Logger, msg string, orderID string, err error) {

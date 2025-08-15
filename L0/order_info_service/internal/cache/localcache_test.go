@@ -16,7 +16,7 @@ func TestGetOrderByID(t *testing.T) {
 		order := generateTestOrder(orderID)
 		cache.SetOrder(order)
 
-		got, err := cache.GetOrderByID(orderID)
+		got, err := cache.GetOrderByUID(orderID)
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		require.True(t, cmp.Equal(order, got))
@@ -25,7 +25,7 @@ func TestGetOrderByID(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		cache := NewLocalCache()
 		orderID := "nonexistent"
-		got, err := cache.GetOrderByID(orderID)
+		got, err := cache.GetOrderByUID(orderID)
 		require.Error(t, err)
 		require.Nil(t, got)
 		require.ErrorIs(t, err, srvcerrors.ErrNotFound)
@@ -62,7 +62,7 @@ func TestSetOrder(t *testing.T) {
 		order := generateTestOrder(orderID)
 
 		cache.SetOrder(order)
-		got, err := cache.GetOrderByID(orderID)
+		got, err := cache.GetOrderByUID(orderID)
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		require.Equal(t, orderID, got.OrderUID)
@@ -76,7 +76,7 @@ func TestClear(t *testing.T) {
 
 	cache.Clear()
 
-	got, err := cache.GetOrderByID(order.OrderUID)
+	got, err := cache.GetOrderByUID(order.OrderUID)
 	require.Error(t, err)
 	require.Nil(t, got)
 	require.ErrorIs(t, err, srvcerrors.ErrNotFound)
