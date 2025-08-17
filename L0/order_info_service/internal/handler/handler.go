@@ -14,8 +14,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// middleware for metrics?
-
 type Handler struct {
 	ctrl   controller.ControllerProvider
 	logger logger.Logger

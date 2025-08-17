@@ -1,12 +1,17 @@
--- Удаляем существующие типы, если они есть
-DROP TYPE IF EXISTS currency_type;
-DROP TYPE IF EXISTS locale_type;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'currency_type') THEN
+    CREATE TYPE currency_type AS ENUM ('RUB', 'USD');
+  END IF;
 
--- Создаем типы
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'locale_type') THEN
+    CREATE TYPE locale_type AS ENUM ('ru', 'en');
+  END IF;
+END$$;
+
 CREATE TYPE currency_type AS ENUM ('RUB', 'USD');
 CREATE TYPE locale_type AS ENUM ('ru', 'en');
 
--- Остальная часть схемы остается без изменений
 CREATE TABLE IF NOT EXISTS orders (
     order_uid TEXT PRIMARY KEY,
     track_number TEXT NOT NULL,

@@ -5,10 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	//"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/cache"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/controller"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/logger"
-	//"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/repository"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/model"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/srvcerrors"
 	"github.com/stretchr/testify/assert"
@@ -71,7 +69,7 @@ func (m *MockCache) GetOrderByUID(orderID string) (*model.Order, error) {
     return nil, args.Error(1)
 }
 
-func (m *MockCache) GetItemsByOrderUID(orderID string) ([]*model.Item, error) {
+func (m *MockCache) GetItemsByOrderUID(orderID string, lastID, limit int) ([]*model.Item, error) {
     args := m.Called(orderID)
     if items, ok := args.Get(0).([]*model.Item); ok || args.Get(0) == nil {
         return items, args.Error(1)

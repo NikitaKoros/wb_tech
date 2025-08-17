@@ -56,7 +56,7 @@ func (ctrl *Controller) GetItemsByOrderUID(ctx context.Context, orderID string, 
 		zap.String("order_uid", orderID),
 		zap.Int("limit", limit))
 	
-	items, err := ctrl.cache.GetItemsByOrderUID(orderID)
+	items, err := ctrl.cache.GetItemsByOrderUID(orderID, lastID, limit)
 	if err == nil {
 		return items, nil
 	}

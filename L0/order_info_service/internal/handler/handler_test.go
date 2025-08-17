@@ -10,7 +10,6 @@ import (
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/logger"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/model"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/srvcerrors"
-	//"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

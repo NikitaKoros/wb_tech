@@ -6,7 +6,7 @@ import (
 
 type Cache interface {
 	GetOrderByUID(string) (*model.Order, error)
-	GetItemsByOrderUID(string) ([]*model.Item, error)
+	GetItemsByOrderUID(string, int, int) ([]*model.Item, error)
 	SetOrder(*model.Order)
 	Clear()
 }
