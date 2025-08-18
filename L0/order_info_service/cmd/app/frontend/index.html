@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Info Service</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Order Information</h1>
+        
+        <div class="search-box">
+            <input type="text" id="order-uid" placeholder="Enter Order UID (e.g. RcdC0RFTu3uUeCIv3bQN)">
+            <button id="search-btn">Show Order</button>
+        </div>
+
+        <div id="order-info" class="hidden">
+            <h2>Order Details</h2>
+            <div class="order-details"></div>
+        </div>
+
+        <div id="items-section" class="hidden">
+            <h2>Items</h2>
+            <div class="items-grid"></div>
+            
+            <div class="pagination">
+                <button id="prev-btn" disabled>← Previous</button>
+                <button id="next-btn">Next →</button>
+            </div>
+        </div>
+
+        <div id="error-message" class="error hidden"></div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
