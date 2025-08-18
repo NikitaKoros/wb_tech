@@ -4,11 +4,16 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
+	"strings"
 	"syscall"
 	"time"
 
@@ -46,6 +51,9 @@ type Config struct {
 
 	ServerPort string `env:"SERVER_PORT" envDefault:"8080"`
 }
+
+//go:embed frontend/*
+var frontendFS embed.FS
 
 func LoadConfig() (Config, error) {
 	var cfg Config
@@ -88,11 +96,11 @@ func main() {
 	httpHandler := handler.NewHandler(ctrl, logg)
 
 	kafkaConfig := kafka.KafkaConfig{
-		BootstrapServers: cfg.KafkaBootstrapServers,
-		GroupID:          cfg.KafkaGroupID,
-		Topic:            cfg.KafkaTopic,
-		AutoOffset:       cfg.KafkaAutoOffset,
-		SessionTimeout:   cfg.KafkaSessionTimeout,
+		BootstrapServers:  cfg.KafkaBootstrapServers,
+		GroupID:           cfg.KafkaGroupID,
+		Topic:             cfg.KafkaTopic,
+		AutoOffset:        cfg.KafkaAutoOffset,
+		SessionTimeout:    cfg.KafkaSessionTimeout,
 		HeartbeatInterval: cfg.KafkaHeartbeatInterval,
 		MaxPollInterval:   cfg.KafkaMaxPollInterval,
 		MaxRetries:        cfg.KafkaMaxRetries,
@@ -109,7 +117,7 @@ func main() {
 	if cachedAmount, err = controller.WarmUpCache(context.Background(), repo, cache, 100); err != nil {
 		logg.Error("failed to warm up cache", zap.Error(err))
 	}
-	
+
 	logg.Info("orders added to cache", zap.Int("amount", cachedAmount))
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -117,7 +125,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:    ":" + cfg.ServerPort,
-		Handler: httpHandler,
+		Handler: setupRouter(httpHandler, logg),
 	}
 	go func() {
 		logg.Info("starting HTTP server",
@@ -163,6 +171,76 @@ func main() {
 	}
 
 	logg.Info("application shutdown complete")
+}
+
+func setupRouter(apiHandler http.Handler, log logger.Logger) http.Handler {
+	mux := http.NewServeMux()
+
+	frontendRoot, err := fs.Sub(frontendFS, "frontend")
+	if err != nil {
+		log.Info("failed to sub frontend fs", zap.Error(err))
+		return mux
+	}
+
+	staticServer := http.FileServer(http.FS(frontendRoot))
+	mux.Handle("/static/", http.StripPrefix("/static/", staticServer))
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		reqPath := strings.TrimPrefix(r.URL.Path, "/")
+
+		if reqPath == "" {
+			serveIndex(w, frontendRoot)
+			return
+		}
+
+		data, err := fs.ReadFile(frontendRoot, reqPath)
+		if err == nil {
+			ext := path.Ext(reqPath)
+			if c := mime.TypeByExtension(ext); c != "" {
+				w.Header().Set("Content-Type", c)
+			} else {
+				w.Header().Set("Content-Type", http.DetectContentType(data))
+			}
+			w.Write(data)
+			return
+		}
+
+		serveIndex(w, frontendRoot)
+	})
+
+	mux.Handle("/api/", apiHandler)
+
+	return corsMiddleware(mux)
+}
+
+func serveIndex(w http.ResponseWriter, root fs.FS) {
+	data, err := fs.ReadFile(root, "index.html")
+	if err != nil {
+		http.Error(w, "index.html not found", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(data)
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		port := os.Getenv("SERVER_PORT")
+		if port == "" {
+			port = "8080"
+		}
+
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:"+port)
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func initDB(cfg Config, log logger.Logger) (*sql.DB, error) {

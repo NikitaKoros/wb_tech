@@ -11,13 +11,9 @@ import (
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/internal/logger"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/srvcerrors"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
 )
-
-// check time difference between queries
-// cache gives all order data with items, repo gives without items, fix
-// front and nginx??
-// do not log sensitive data
 
 type Handler struct {
 	ctrl   controller.ControllerProvider
@@ -27,6 +23,13 @@ type Handler struct {
 
 func NewHandler(ctrl controller.ControllerProvider, logger logger.Logger) *Handler {
 	e := echo.New()
+	
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+        AllowOrigins: []string{"http://localhost:8000"},
+        AllowMethods: []string{echo.GET, echo.OPTIONS},
+        AllowCredentials: true,
+    }))
+	
 	e.Use(ZapLogger(logger))
 	e.HTTPErrorHandler = ErrorHandler(logger)
 
@@ -49,12 +52,12 @@ func (h *Handler) setupRoutes() {
 	api := h.e.Group("/api")
 
 	orders := api.Group("/orders")
-	orders.GET("/:id", h.getOrder)
-	orders.GET("/:id/items", h.getOrderItems)
+	orders.GET("/:order_uid", h.getOrder)
+	orders.GET("/:order_uid/items", h.getOrderItems)
 }
 
 func (h *Handler) getOrder(c echo.Context) error {
-	orderID := c.Param("id")
+	orderID := c.Param("order_uid")
 
 	if orderID == "" || strings.TrimSpace(orderID) == "" {
 		return srvcerrors.ErrInvalidInput
@@ -69,7 +72,7 @@ func (h *Handler) getOrder(c echo.Context) error {
 }
 
 func (h *Handler) getOrderItems(c echo.Context) error {
-	orderID := c.Param("id")
+	orderID := c.Param("order_uid")
 	if orderID == "" || strings.TrimSpace(orderID) == "" {
 		return srvcerrors.ErrInvalidInput
 	}
@@ -113,7 +116,7 @@ func ZapLogger(logger logger.Logger) echo.MiddlewareFunc {
 			logger.Debug("handler: incoming request",
 				zap.String("method", c.Request().Method),
 				zap.String("path", c.Request().URL.Path),
-				zap.String("order_uid", c.Param("id")))
+				zap.String("order_uid", c.Param("order_uid")))
 
 			err := next(c)
 
@@ -123,14 +126,14 @@ func ZapLogger(logger logger.Logger) echo.MiddlewareFunc {
 					zap.String("method", c.Request().Method),
 					zap.String("path", c.Request().URL.Path),
 					zap.Duration("duration", duration),
-					zap.String("order_uid", c.Param("id")),
+					zap.String("order_uid", c.Param("order_uid")),
 					zap.Error(err))
 			} else {
 				logger.Debug("handler: request completed",
 					zap.String("method", c.Request().Method),
 					zap.String("path", c.Request().URL.Path),
 					zap.Duration("duration", duration),
-					zap.String("order_uid", c.Param("id")))
+					zap.String("order_uid", c.Param("order_uid")))
 			}
 			return err
 		}
@@ -166,14 +169,14 @@ func ErrorHandler(logger logger.Logger) echo.HTTPErrorHandler {
 				zap.String("method", c.Request().Method),
 				zap.String("path", c.Request().URL.Path),
 				zap.Int("status", status),
-				zap.String("order_uid", c.Param("id")),
+				zap.String("order_uid", c.Param("order_uid")),
 				zap.Error(err))
 		} else {
 			logger.Warn("handler: client error",
 				zap.String("method", c.Request().Method),
 				zap.String("path", c.Request().URL.Path),
 				zap.Int("status", status),
-				zap.String("order_uid", c.Param("id")),
+				zap.String("order_uid", c.Param("order_uid")),
 				zap.Error(err))
 		}
 

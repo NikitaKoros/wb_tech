@@ -64,22 +64,7 @@ func (g *OrderGenerator) GenerateValidOrder() *model.Order {
 			GoodsTotal:   317,
 			CustomFee:    0,
 		},
-		Items: []*model.Item{
-			{
-				OrderUID:    orderUID,
-				ChrtID:      9934930,
-				TrackNumber: trackNumber,
-				Price:       453,
-				RID:         g.generateRID(),
-				Name:        "Mascaras",
-				Sale:        30,
-				Size:        "0",
-				TotalPrice:  317,
-				NmID:        2389212,
-				Brand:       "Vivienne Sabo",
-				Status:      202,
-			},
-		},
+		Items: g.generateItems(orderUID, trackNumber, g.rand.Intn(11)),
 		Locale:            "en",
 		InternalSignature: "",
 		CustomerID:        "test",
@@ -163,6 +148,38 @@ func (g *OrderGenerator) GenerateInvalidOrder() *model.Order {
 
 	return order
 }
+
+func (g *OrderGenerator) generateItems(orderUID, trackNumber string, count int) []*model.Item {
+	if count <= 0 {
+		count = 1
+	}
+
+	names := []string{
+		"Mascaras", "Lipstick", "Eyeliner", "Foundation", "Powder",
+		"Blush", "Concealer", "Highlighter", "Bronzer", "Nail Polish",
+	}
+
+	items := make([]*model.Item, 0, count)
+	for i := 0; i < count; i++ {
+		item := &model.Item{
+			OrderUID:    orderUID,
+			ChrtID:      9934930 + i,
+			TrackNumber: trackNumber,
+			Price:       453,
+			RID:         g.generateRID(),
+			Name:        names[g.rand.Intn(len(names))],
+			Sale:        30,
+			Size:        "0",
+			TotalPrice:  317,
+			NmID:        2389212 + i,
+			Brand:       "Vivienne Sabo",
+			Status:      202,
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
 
 func (g *OrderGenerator) generateOrderUID() string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

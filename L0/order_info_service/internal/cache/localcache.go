@@ -28,9 +28,9 @@ func (l *LocalCache) GetOrderByUID(orderID string) (*model.Order, error){
 		return nil, fmt.Errorf("%w: order %s not found in cache", srvcerrors.ErrNotFound, orderID)
 	}
 	
-	orderCopy := order
+	orderCopy := *order
     orderCopy.Items = nil
-	return orderCopy, nil
+	return &orderCopy, nil
 }
 
 func (l *LocalCache) GetItemsByOrderUID(orderID string, lastID, limit int) ([]*model.Item, error){
