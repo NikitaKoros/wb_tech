@@ -80,17 +80,17 @@ func (ctrl *Controller) GetItemsByOrderUID(ctx context.Context, orderID string, 
 	return items, nil
 }
 
-func WarmUpCache(ctx context.Context, repo repository.RepositoryProvider, cache cache.Cache, limit int) (error){
+func WarmUpCache(ctx context.Context, repo repository.RepositoryProvider, cache cache.Cache, limit int) (int, error){
 	orders, err := repo.GetAllOrders(ctx, limit)
 	if err != nil {
-		return fmt.Errorf("failed to get orders to warmup cache: %w", err)
+		return 0, fmt.Errorf("failed to get orders to warmup cache: %w", err)
 	}
 	
 	for _, order := range orders {
 		cache.SetOrder(order)
 	}
 	
-	return nil
+	return len(orders), nil
 }
 
 func logError(logger logger.Logger, msg string, orderID string, err error) {

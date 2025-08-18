@@ -226,9 +226,10 @@ func TestWarmUpCache_Success(t *testing.T) {
 	mockCache.On("SetOrder", orders[1]).Return()
 	
 	ctx := context.Background()
-	err := controller.WarmUpCache(ctx, mockRepo, mockCache, 10)
+	amount, err := controller.WarmUpCache(ctx, mockRepo, mockCache, 10)
 	
 	require.NoError(t, err)
+	require.Equal(t, 2, amount)
 }
 
 func TestWarmUpCache_RepositoryError(t *testing.T) {
@@ -238,9 +239,10 @@ func TestWarmUpCache_RepositoryError(t *testing.T) {
 	mockRepo.On("GetAllOrders", mock.Anything, 10).Return(nil, srvcerrors.ErrDatabase)
 	
 	ctx := context.Background()
-	err := controller.WarmUpCache(ctx, mockRepo, mockCache, 10)
+	amount, err := controller.WarmUpCache(ctx, mockRepo, mockCache, 10)
 	
 	require.Error(t, err)
+	require.Equal(t, 0, amount)
 	assert.Contains(t, err.Error(), "failed to get orders to warmup cache")
 	assert.ErrorIs(t, err, srvcerrors.ErrDatabase)
 }

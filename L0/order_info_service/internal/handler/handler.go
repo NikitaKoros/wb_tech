@@ -14,6 +14,11 @@ import (
 	"go.uber.org/zap"
 )
 
+// check time difference between queries
+// cache gives all order data with items, repo gives without items, fix
+// front and nginx??
+// do not log sensitive data
+
 type Handler struct {
 	ctrl   controller.ControllerProvider
 	logger logger.Logger

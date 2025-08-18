@@ -9,9 +9,6 @@ BEGIN
   END IF;
 END$$;
 
-CREATE TYPE currency_type AS ENUM ('RUB', 'USD');
-CREATE TYPE locale_type AS ENUM ('ru', 'en');
-
 CREATE TABLE IF NOT EXISTS orders (
     order_uid TEXT PRIMARY KEY,
     track_number TEXT NOT NULL,

@@ -105,9 +105,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := controller.WarmUpCache(context.Background(), repo, cache, 100); err != nil {
+	var cachedAmount int
+	if cachedAmount, err = controller.WarmUpCache(context.Background(), repo, cache, 100); err != nil {
 		logg.Error("failed to warm up cache", zap.Error(err))
 	}
+	
+	logg.Info("orders added to cache", zap.Int("amount", cachedAmount))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -6,8 +6,8 @@ type Order struct {
 	OrderUID          string    `json:"order_uid" validate:"required,alphanum"`
 	TrackNumber       string    `json:"track_number" validate:"required"`
 	Entry             string    `json:"entry" validate:"required"`
-	Delivery          Delivery  `json:"delivery" validate:"required,dive"`
-	Payment           Payment   `json:"payment" validate:"required,dive"`
+	Delivery          Delivery  `json:"delivery" validate:"required"`
+	Payment           Payment   `json:"payment" validate:"required"`
 	Items             []*Item   `json:"items" validate:"required,min=1,dive"`
 	Locale            string    `json:"locale" validate:"required,oneof=en ru"`
 	InternalSignature string    `json:"internal_signature" validate:"omitempty"`
@@ -35,12 +35,12 @@ type Payment struct {
 	RequestID    string `json:"request_id" validate:"omitempty"`
 	Currency     string `json:"currency" validate:"required,oneof=USD RUB"`
 	Provider     string `json:"provider" validate:"required"`
-	Amount       int    `json:"amount" validate:"required,min=0"`
+	Amount       int    `json:"amount" validate:"gte=0"`
 	PaymentDT    int    `json:"payment_dt" validate:"required"`
 	Bank         string `json:"bank" validate:"required"`
-	DeliveryCost int    `json:"delivery_cost" validate:"required,min=0"`
-	GoodsTotal   int    `json:"goods_total" validate:"required,min=0"`
-	CustomFee    int    `json:"custom_fee" validate:"required,min=0"`
+	DeliveryCost int    `json:"delivery_cost" validate:"gte=0"`
+	GoodsTotal   int    `json:"goods_total" validate:"gte=0"`
+	CustomFee    int    `json:"custom_fee" validate:"gte=0"`
 }
 
 type Item struct {
@@ -48,12 +48,12 @@ type Item struct {
 	ID          int    `json:"id" validate:"omitempty"`
 	ChrtID      int    `json:"chrt_id" validate:"required"`
 	TrackNumber string `json:"track_number" validate:"required"`
-	Price       int    `json:"price" validate:"required,min=0"`
+	Price       int    `json:"price" validate:"gte=0"`
 	RID         string `json:"rid" validate:"required"`
 	Name        string `json:"name" validate:"required"`
-	Sale        int    `json:"sale" validate:"required,min=0,max=100"`
+	Sale        int    `json:"sale" validate:"gte=0,max=100"`
 	Size        string `json:"size" validate:"required"`
-	TotalPrice  int    `json:"total_price" validate:"required,min=0"`
+	TotalPrice  int    `json:"total_price" validate:"gte=0"`
 	NmID        int    `json:"nm_id" validate:"required"`
 	Brand       string `json:"brand" validate:"required"`
 	Status      int    `json:"status" validate:"required"`

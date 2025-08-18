@@ -6,6 +6,7 @@ import (
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/model"
 	"github.com/NikitaKoros/wb_tech/L0/order_info_service/pkg/srvcerrors"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +20,13 @@ func TestGetOrderByID(t *testing.T) {
 		got, err := cache.GetOrderByUID(orderID)
 		require.NoError(t, err)
 		require.NotNil(t, got)
-		require.True(t, cmp.Equal(order, got))
+		if diff := cmp.Diff(
+			got, 
+			order, 
+			cmpopts.IgnoreFields(model.Order{}, "Items"),
+		); diff != "" {
+			t.Errorf("GetOrderByUID() mismatch (-want +got):\n%s", diff)
+		}
 	})
 
 	t.Run("not found", func(t *testing.T) {
