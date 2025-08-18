@@ -46,7 +46,7 @@ wait-dev-db:
 	docker-compose -f ./docker-compose.dev.yml up --wait
 
 stop-dev-db:
-	@docker-compose -f ./docker-compose.dev.yml down --remove-orphans
+	@DEV_DB_HOST= DEV_DB_PORT= DEV_DB_USER= DEV_DB_PASSWORD= DEV_DB_NAME= docker-compose -f ./docker-compose.dev.yml down --remove-orphans
 
 start-kafka:
 	@docker-compose -f ./docker-compose.kafka.yml up -d
