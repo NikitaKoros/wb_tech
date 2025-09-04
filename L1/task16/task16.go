@@ -19,9 +19,9 @@ func main() {
 		slc = append(slc, random.Intn(MAX_NUM))
 	}
 	
-	sortedArr := quickSort(slc)
+	sorted := quickSort(slc)
 	fmt.Println("Unsorted slice:", slc)
-	fmt.Println("Sorted array:", sortedArr)
+	fmt.Println("Sorted slice:", sorted)
 }
 
 func quickSort(arr []int) []int {
