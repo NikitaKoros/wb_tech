@@ -29,9 +29,9 @@ func main() {
 		go worker(i, ch, &wg)
 	}
 	
-	rand.New(rand.NewSource(time.Now().UnixNano()))
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for start := time.Now(); time.Since(start) < time.Second; {
-		ch <- rand.Intn(1000)
+		ch <- random.Intn(1000)
 		time.Sleep(time.Millisecond * 100)
 	}
 	
