@@ -12,35 +12,37 @@ import (
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	w := bufio.NewWriter(os.Stdout)
-	defer w.Flush()
+	defer func() {
+		_ = w.Flush()
+	}()
 
-	w.WriteString("Write <exit> to exit program\n")
+	_, _ = w.WriteString("Write <exit> to exit program\n")
 	for {
-		w.WriteString("Input string to unpack: ")
-		w.Flush()
+		_, _ = w.WriteString("Input string to unpack: ")
+		_ = w.Flush()
 
 		if !scanner.Scan() {
 			if err := scanner.Err(); err != nil {
-				fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
+				_, _ = fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
 			}
 			return
 		}
 		str := scanner.Text()
 
 		if str == "exit" {
-			w.WriteString("Exiting program\n")
+			_, _ = w.WriteString("Exiting program\n")
 			return
 		}
 
 		unpackedStr, err := Unpack(str)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unpacking failed: %v\n\n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "Unpacking failed: %v\n\n", err)
 			continue
 		}
 
-		w.WriteString("Unpacked string: ")
-		w.WriteString(unpackedStr)
-		w.WriteString("\n\n")
+		_, _ = w.WriteString("Unpacked string: ")
+		_, _ = w.WriteString(unpackedStr)
+		_, _ = w.WriteString("\n\n")
 	}
 }
 
