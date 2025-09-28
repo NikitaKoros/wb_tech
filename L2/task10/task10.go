@@ -39,9 +39,15 @@ func main() {
 		checkFlag     = flag.Bool("c", false, "check if input is sorted")
 		humanFlag     = flag.Bool("h", false, "sort by human-readable sizes")
 		separatorFlag = flag.String("t", "\t", "field separator")
+		helpFlag      = flag.Bool("help", false, "display this help and exit")
 	)
 
 	flag.Parse()
+
+	if *helpFlag {
+		flag.Usage()
+		os.Exit(0)
+	}
 
 	config := &sortpkg.Config{
 		Column:    *columnFlag,
@@ -82,7 +88,7 @@ func handleInput(filepath string, cfg *sortpkg.Config, w io.Writer) error {
 	if filepath != "" {
 		return sortpkg.SortFileToWriter(filepath, w, cfg)
 	}
-	
+
 	tmpFile, err := os.CreateTemp("", "sortstdin-")
 	if err != nil {
 		return err
